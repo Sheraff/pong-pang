@@ -52,7 +52,7 @@ jobs:
 
       - name: 🏗️ Building
         timeout-minutes: 1
-        run: pnpm build
+        run: pnpm build --assetsDir ${{ github.event.repository.name }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
