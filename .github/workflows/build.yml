@@ -1,0 +1,71 @@
+name: Pull Request Workflow
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: ⚙️ Node setup 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          check-latest: true
+
+      - name: ⚙️ Pnpm setup 8.x
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8.x
+          run_install: false
+
+      - name: 📁 Get pnpm store directory
+        shell: bash
+        run: echo "PNPM_STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: 📦 Cache .pnpm-store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
+
+      - name: 🧰 Install Dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏗️ Building
+        timeout-minutes: 1
+        run: pnpm build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
