@@ -136,8 +136,8 @@ function start(ctx: OffscreenCanvasRenderingContext2D) {
 		const time = performance.now()
 		setImmediate(loop)
 		const delta = time - lastTime
-		lastTime = time
 		if (delta === 0) return
+		lastTime = time
 		metrics.updates++
 
 		const m = speed * delta / 1000
@@ -148,23 +148,31 @@ function start(ctx: OffscreenCanvasRenderingContext2D) {
 		white.y += white.dy * m
 
 		// collision
-		for (const ball of [black, white]) {
-			const xMin = Math.floor(ball.x / cellSize) - 1
-			const yMin = Math.floor(ball.y / cellSize) - 1
-			for (let y = yMin; y < yMin + 3; y++) {
-				const wy = y < 0 ? size + y : y % size
-				for (let x = xMin; x < xMin + 3; x++) {
-					const wx = x < 0 ? size + x : x % size
-					if (grid[wy][wx] === ball.ignores) continue
-					const collision = computeCollision(ball.x, ball.y, radius, x * cellSize, y * cellSize, cellSize)
-					if (!collision) continue
-					grid[wy][wx] = ball.ignores
-					if (collision === 'x') {
-						ball.dx *= -1
-						ball.x = wx * cellSize + (ball.dx > 0 ? (cellSize + radius) : (-radius))
-					} else {
-						ball.dy *= -1
-						ball.y = wy * cellSize + (ball.dy > 0 ? (cellSize + radius) : (-radius))
+		let collided = true
+		while (collided) {
+			collide_resolution: for (const ball of [black, white]) {
+				collided = false
+				const xMin = Math.floor(ball.x / cellSize) - 1
+				const yMin = Math.floor(ball.y / cellSize) - 1
+				for (let y = yMin; y < yMin + 3; y++) {
+					const wy = y < 0 ? size + y : y % size
+					for (let x = xMin; x < xMin + 3; x++) {
+						const wx = x < 0 ? size + x : x % size
+						if (grid[wy][wx] === ball.ignores) continue
+						const collision = computeCollision(ball.x, ball.y, radius, x * cellSize, y * cellSize, cellSize)
+						if (!collision) continue
+						collided = true
+						grid[wy][wx] = ball.ignores
+						if (collision === 'x') {
+							ball.dx *= -1
+							const contact = x * cellSize + (ball.dx > 0 ? (cellSize + radius) : (-radius))
+							ball.x += Math.abs(ball.x - contact) * ball.dx * 2
+						} else {
+							ball.dy *= -1
+							const contact = y * cellSize + (ball.dy > 0 ? (cellSize + radius) : (-radius))
+							ball.y += Math.abs(ball.y - contact) * ball.dy * 2
+						}
+						break collide_resolution
 					}
 				}
 			}
