@@ -5,6 +5,9 @@ import { setImmediate } from "./utils/setImmediate"
 export type Incoming = { type: "canvas", data: { canvas: OffscreenCanvas } }
 self.onmessage = (e: MessageEvent<Incoming>) => handleMessage(e.data)
 
+const BLACK = "#451952"
+const WHITE = "#F39F5A"
+
 function handleMessage(event: Incoming) {
 	if (event.type === "canvas") {
 		const ctx = event.data.canvas.getContext("2d")!
@@ -18,7 +21,7 @@ function start(ctx: OffscreenCanvasRenderingContext2D) {
 	const size = 24
 	const speed = 300
 
-	const grid = Array.from({ length: size }, () => Array.from({ length: size }, (_, x) => x < size / 2 ? 1 : 0))
+	const grid = Array.from({ length: size }, (_, y) => Array.from({ length: size }, (_, x) => y > x ? 1 : 0))
 
 	const w = ctx.canvas.width
 	const h = ctx.canvas.height
@@ -62,13 +65,13 @@ function start(ctx: OffscreenCanvasRenderingContext2D) {
 		requestAnimationFrame(render)
 		ctx.clearRect(0, 0, w, h)
 
-		ctx.fillStyle = "black"
+		ctx.fillStyle = BLACK
 		ctx.fillRect(0, 0, w, h)
 
 		for (const row of grid) {
 			for (const cell of row) {
 				if (cell) {
-					ctx.fillStyle = "white"
+					ctx.fillStyle = WHITE
 					ctx.fillRect(0, 0, cellSize + 1, cellSize + 1)
 				}
 				ctx.translate(cellSize, 0)
@@ -77,41 +80,44 @@ function start(ctx: OffscreenCanvasRenderingContext2D) {
 		}
 		ctx.resetTransform()
 
-		// draw black
-		ctx.beginPath()
-		ctx.fillStyle = "black"
-		ctx.arc(black.x, black.y, radius, 0, circle)
-		ctx.fill()
-		ctx.closePath()
+		for (const [x, y] of [[0, 0], [0, 1], [0, -1], [1, 0], [-1, 0]]) {
+			// draw black
+			ctx.beginPath()
+			ctx.fillStyle = BLACK
+			ctx.arc(black.x + x * w, black.y + y * h, radius, 0, circle)
+			ctx.fill()
+			ctx.closePath()
 
-		// draw white
-		ctx.beginPath()
-		ctx.fillStyle = "white"
-		ctx.arc(white.x, white.y, radius, 0, circle)
-		ctx.fill()
-		ctx.closePath()
+			// draw white
+			ctx.beginPath()
+			ctx.fillStyle = WHITE
+			ctx.arc(white.x + x * w, white.y + y * h, radius, 0, circle)
+			ctx.fill()
+			ctx.closePath()
 
-		// // draw black collision candidates
-		// {
-		// 	const xMin = Math.floor(black.x / cellSize) - 1
-		// 	const yMin = Math.floor(black.y / cellSize) - 1
-		// 	ctx.strokeStyle = "red"
-		// 	ctx.strokeRect(xMin * cellSize, yMin * cellSize, cellSize * 3, cellSize * 3)
-		// }
+			// // draw black collision candidates
+			// {
+			// 	const xMin = Math.floor((black.x + x * w) / cellSize) - 1
+			// 	const yMin = Math.floor((black.y + y * h) / cellSize) - 1
+			// 	ctx.strokeStyle = "red"
+			// 	ctx.strokeRect(xMin * cellSize, yMin * cellSize, cellSize * 3, cellSize * 3)
+			// }
 
-		// // draw white collision candidates
-		// {
-		// 	const xMin = Math.floor(white.x / cellSize) - 1
-		// 	const yMin = Math.floor(white.y / cellSize) - 1
-		// 	ctx.strokeStyle = "blue"
-		// 	ctx.strokeRect(xMin * cellSize, yMin * cellSize, cellSize * 3, cellSize * 3)
-		// }
+			// // draw white collision candidates
+			// {
+			// 	const xMin = Math.floor((white.x + x * w) / cellSize) - 1
+			// 	const yMin = Math.floor((white.y + y * h) / cellSize) - 1
+			// 	ctx.strokeStyle = "blue"
+			// 	ctx.strokeRect(xMin * cellSize, yMin * cellSize, cellSize * 3, cellSize * 3)
+			// }
+		}
 
-		// draw metrics
-		ctx.font = "24px sans-serif"
-		ctx.fillStyle = "red"
-		ctx.fillText(`Frame: ${metrics.fps}`, 10, 24)
-		ctx.fillText(`Update: ${metrics.ups}`, 10, 48)
+
+		// // draw metrics
+		// ctx.font = "24px sans-serif"
+		// ctx.fillStyle = "red"
+		// ctx.fillText(`Frame: ${metrics.fps}`, 10, 24)
+		// ctx.fillText(`Update: ${metrics.ups}`, 10, 48)
 
 		// accumulate metrics over 1s
 		const now = performance.now()
@@ -146,24 +152,29 @@ function start(ctx: OffscreenCanvasRenderingContext2D) {
 			const xMin = Math.floor(ball.x / cellSize) - 1
 			const yMin = Math.floor(ball.y / cellSize) - 1
 			for (let y = yMin; y < yMin + 3; y++) {
+				const wy = y < 0 ? size + y : y % size
 				for (let x = xMin; x < xMin + 3; x++) {
-					// if (!grid[y]) continue
-					if (grid[y]?.[x] === ball.ignores) continue
+					const wx = x < 0 ? size + x : x % size
+					if (grid[wy][wx] === ball.ignores) continue
 					const collision = computeCollision(ball.x, ball.y, radius, x * cellSize, y * cellSize, cellSize)
 					if (!collision) continue
-					if (y >= 0 && y < size && x >= 0 && x < size) {
-						grid[y][x] = ball.ignores
-					}
+					grid[wy][wx] = ball.ignores
 					if (collision === 'x') {
 						ball.dx *= -1
-						ball.x = x * cellSize + (ball.dx > 0 ? (cellSize + radius) : (-radius))
+						ball.x = wx * cellSize + (ball.dx > 0 ? (cellSize + radius) : (-radius))
 					} else {
 						ball.dy *= -1
-						ball.y = y * cellSize + (ball.dy > 0 ? (cellSize + radius) : (-radius))
+						ball.y = wy * cellSize + (ball.dy > 0 ? (cellSize + radius) : (-radius))
 					}
 				}
 			}
 		}
+
+		// wrap around
+		black.x = (black.x + w) % w
+		black.y = (black.y + h) % h
+		white.x = (white.x + w) % w
+		white.y = (white.y + h) % h
 	}
 	setImmediate(loop)
 }

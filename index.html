@@ -5,11 +5,19 @@
 	<style>
 		/* Inline style */
 		body {
-			background-color: #f2f2f2;
+			background-color: lch(0% 0 0);
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100dvh;
+			background: radial-gradient(circle, #451952 min(250px, 100dvmin), #F39F5A 200%);
+			margin: 0;
 		}
 		canvas {
 			width: 500px;
 			height: 500px;
+			max-width: 100dvmin;
+			max-height: 100dvmin;
 		}
 	</style>
 </head>
