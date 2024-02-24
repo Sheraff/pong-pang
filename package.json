@@ -1,0 +1,17 @@
+{
+	"name": "pong-pang",
+	"version": "1.0.0",
+	"description": "",
+	"main": "script.ts",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {},
+	"devDependencies": {
+		"vite": "5.1.4"
+	}
+}
